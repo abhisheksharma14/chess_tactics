@@ -1,0 +1,357 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Chess Tactics</title>
+		<link rel=stylesheet type="text/css" href="chessboard.css">
+		<script src="chessboard-0.3.0.js"></script>
+		<script src="json3.min.js"></script>
+		<script src="jquery-1.10.1.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.js"></script>
+		<script>
+		
+			var tactics = [
+					['6k1/5p1p/4p1p1/2p1P3/2P4P/3P2PK/R1Q3B1/1r1n2q1 b - - 0 1', '...Ra1 if Rxa1 Nf2+' ],
+					['3r2k1/4qppp/p7/1pp1n3/4P3/BP6/P2R1PPP/3Q2K1 b - - 0 1', '...Nf3+ gxf3 Qg5' ],
+					['6k1/5p2/6p1/3Q4/3P1K1P/5P2/1P2r1q1/R7 b - - 0 1', '...Qh2+ if Kg5 Qg3+ or if Kg4 Rg2#' ],
+					['3rnrk1/1b3pp1/1q2p1P1/p3P3/1p1N4/4Q3/PPP4P/2KR1R2 w - - 0 1', 'Qh3'],
+					['8/8/8/2Q5/8/3K4/1k6/q7 w - - 0 1', 'Qb4+'],
+					['r3k2r/4b2p/3pBp2/1bq5/1p2P3/3N4/PpP1Q1PP/1K1R1R2 w - - 0 1', 'Rf5 Qb6 Qh5+']
+				];
+				
+			var matePuzzles	= [];
+			var materialPuzzles = [];
+			var files = ["a", "b", "c", "d", "e", "f", "g", "h"];
+			var cleanedSolutions = [];	
+				
+				var board,
+  game = new Chess(),
+  statusEl = $('#status'),
+  fenEl = $('#fen'),
+  pgnEl = $('#pgn');
+
+// do not pick up pieces if the game is over
+// only pick up pieces for the side to move
+var onDragStart = function(source, piece, position, orientation) {
+  if (game.game_over() === true ||
+      (game.turn() === 'w' && piece.search(/^b/) !== -1) ||
+      (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
+    return false;
+  }
+};
+
+var onDrop = function(source, target) {
+  // see if the move is legal
+  var move = game.move({
+    from: source,
+    to: target,
+    promotion: 'q' // NOTE: always promote to a queen for example simplicity
+  });
+
+  // illegal move
+  if (move === null) return 'snapback';
+
+  updateStatus();
+};
+
+// update the board position after the piece snap 
+// for castling, en passant, pawn promotion
+var onSnapEnd = function() {
+  board.position(game.fen());
+};
+
+var updateStatus = function() {
+  var status = '';
+
+  var moveColor = 'White';
+  if (game.turn() === 'b') {
+    moveColor = 'Black';
+  }
+
+  // checkmate?
+  if (game.in_checkmate() === true) {
+    status = 'Game over, ' + moveColor + ' is in checkmate.';
+  }
+
+  // draw?
+  else if (game.in_draw() === true) {
+    status = 'Game over, drawn position';
+  }
+
+  // game still on
+  else {
+    status = moveColor + ' to move';
+
+    // check?
+    if (game.in_check() === true) {
+      status += ', ' + moveColor + ' is in check';
+    }
+  }
+
+  statusEl.html(status);
+  fenEl.html(game.fen());
+  pgnEl.html(game.pgn());
+};
+
+var cfg = {
+  draggable: true,
+  position: 'start',
+  onDragStart: onDragStart,
+  onDrop: onDrop,
+  onSnapEnd: onSnapEnd
+};
+//board = ChessBoard("board", cfg);
+
+updateStatus();
+		
+			var notation = [];
+			function findNotation()
+			{
+				i=0;
+				var letter = ['a','b','c','d','e','f','g','h'];
+				while(i<8)
+				{
+					j=1;
+					while (j<=8)
+					{
+						notation.push(letter[i] + j);
+						j++;
+					}
+					i++;
+				}
+				return notation;
+			}
+			
+			function findSum(total, num) 
+			{
+				return total + num;
+			}
+			
+			function initializeBoard() 
+			{
+			
+			/*	
+				var cfg = {
+				  draggable: true,
+				  position: 'start',
+				  onDragStart: onDragStart,
+				  onDrop: onDrop,
+				  onSnapEnd: onSnapEnd
+				};
+				*/
+				board = ChessBoard('board', cfg);
+				//board.start;
+				//board.move('g1-f3');
+
+			}; // end init()
+				
+			function enterPosition()
+			{
+			var position = {
+				  d6: 'bK',
+				  d4: 'wP',
+				  e4: 'wK',
+				  e1: 'wQ'
+				};
+				board = ChessBoard('board', position);
+			}
+			
+			function test()
+			{
+				var items = [
+				  [1, 2],
+				  [3, 4],
+				  [5, 6]
+				];
+				var stringList = ["...Delete the dots"];
+				//alert(stringList);
+				string = stringList[0];
+				string = string.replace('...','');
+				stringList.push(string);
+				//alert(items);
+				//alert(items[0][1]);
+				//alert(string);
+				//alert(stringList);
+				
+				var temp = "This is a string.";
+				var count = (temp.match(/is/g) || []).length;
+				console.log(count);
+				alert(count);
+				alert(temp.match(/is/g) || []);
+				
+			}
+			
+			
+			function cleanSolutions()
+			{
+				//for loop to iterate through every tactic array
+				for (i = 0; i < tactics.length; i++){
+					//variable for the 8 ranks of a chess board and split the string at the slashes, this is how FEN strings work
+					//Example: '3r2k1/4qppp/p7/1pp1n3/4P3/BP6/P2R1PPP/3Q2K1 b - - 0 1', '...Nf3+ gxf3 Qg5'
+					//			^1st rank	^3rd rank	etc.
+					var ranks = tactics[i][0].split("/");
+					//split the solution, which is multiple moves (...Nf3+ gxf3 Qg5), at the spaces
+					var solMoves = tactics[i][1].split(" ");
+					//delete the "if"s
+					while (solMoves.indexOf("if") != -1){
+						var indexIf = solMoves.indexOf("if"); 
+						//alert(indexIf);
+						//alert(solMoves);
+						solMoves.splice(indexIf, 1);
+						//alert(solMoves);
+					}
+					if (solMoves[0].indexOf("...") != -1){
+						//alert(solMoves);
+						solMoves[0] = solMoves[0].replace("...", "");
+						//alert(solMoves);
+					}
+					//create a for loop to iterate through each move of the solution
+					for (j = 0; j < solMoves.length; j++){
+						//just take the first letter because that tells what the piece is
+						//Example: 'Nc3', the big N tells us it's a white knight, lowercase for black
+						var solPiece = solMoves[j].slice(0,1);
+						//alert(solPiece);
+						//now check which color is about to move, 'w' for white, 'b' for black
+						//alert(ranks);
+						//alert(ranks[7].indexOf("w"));
+						if (ranks[7].indexOf("w") != -1){
+							//create one more for loop to iterate through each one of the 8 ranks to find the rank of the piece
+							alert("yo");
+							for (k = 0; k < 8; k++){
+								//check for the piece
+								//alert("hiiii");
+								if (ranks[k].indexOf(solPiece) != -1){
+									alert("holaa");
+									//if that letter for the piece is found, make a variable for its rank and add one because ranks are 1-8  
+									var solRank = k + 1;
+									var piecesInRank = ranks[k].split("");
+									var emptySquares = [];
+									var filledSquares = [];
+									var beforePiece = piecesInRank.slice(0,piecesInRank.indexOf(solPiece));
+									for (l = 0; l < beforePiece.length; l++){
+										if (parseFloat(piecesInRank[l]) == parseFloat(piecesInRank[l])){
+											emptySquares.push(piecesInRank[l]);
+										}else {
+											filledSquares.push(piecesInRank[l]);
+										}
+									}
+									var fileNum = emptySquares.reduce(findSum) + filledSquares.length;
+									var moveLetter = files[fileNum];
+									break;
+								}
+							}
+						}else{
+						//create one last for loop to iterate through each one of the 8 ranks to find the rank of the piece
+						alert("2yo2");
+							for (k = 0; k < 8; k++){
+								//for black, I have to make the letter of the piece lowercase because it is black to move
+								//check for the piece
+								//alert("2hiiii2");
+								solPiece = solPiece.toLowerCase();
+								//alert(solPiece);
+								if (ranks[k].indexOf(solPiece) != -1){
+									//if that letter for the peice is found, make a variable for its rank and add one because ranks are 1-8  
+									//alert("2hola2");
+									var solRank = k + 1;
+									alert(solRank);
+									var piecesInRank = ranks[k].split("");
+									var emptySquares = [];
+									var filledSquares = [];
+									var beforePiece = piecesInRank.slice(0,piecesInRank.indexOf(solPiece));
+									for (l = 0; l < beforePiece.length; l++){
+										if (parseFloat(piecesInRank[l]) == parseFloat(piecesInRank[l])){
+											emptySquares.push(piecesInRank[l]);
+										}else {
+											filledSquares.push(piecesInRank[l]);
+										}
+									}
+									var fileNum = emptySquares.reduce(findSum) + filledSquares.length;
+									var moveLetter = files[fileNum];
+									break;
+								}
+							}
+						}
+						//since the library wants the original position of the piece and the place it will move to, we need to slice off the first letter of the move
+						var partOfSol = solMoves[j].slice(1,3);
+						//add the cleaned solution to an array
+						cleanedSolutions.push(moveLetter + solRank + "-" + partOfSol);
+					}
+					
+				}
+				alert(cleanedSolutions);
+			}
+			
+			function sortTactics()
+			{
+				for (i = 0; i < tactics.length; i++){
+					if (tactics[i][1].indexOf("#") != -1){
+						matePuzzles.push(tactics[i][1]);
+						if (groupByDifficuty(i) == true){
+							hardMates.push(tactics[i][1]);
+						}else if (groupByDifficuty(i) == false){
+							easyMates.push(tactics[i][1]);
+							}
+					}else{
+						materialPuzzles.push(tactics[i][1]);
+					}
+				}	
+			}
+			
+			function groupByDifficuty(i)
+			{
+					if (tactics[i][1].indexOf("if") != -1 && tactics[i][1].indexOf("or") != -1){
+						var solWithIf = tactics[i][1];
+						solWithIf = solWithIf.replace('if','');
+						return true;
+					}else if (tactics[i][1].indexOf("if") != -1){
+						var solWithIf = tactics[i][1];
+						solWithIf = solWithIf.replace('if','');
+					}
+			}
+			
+			function loadTactic()
+			{
+				//alert(tactics);
+				//alert(tactics.length);
+				var randNum = Math.floor(Math.random() * tactics.length);
+				//alert("random num" + randNum);
+				
+				var cfg = {
+					draggable: true,
+					position: tactics[randNum][0],
+					onDragStart: onDragStart,
+					onDrop: onDrop,
+					onSnapEnd: onSnapEnd,
+					dropOffBoard: 'snapback'
+				};
+				board = ChessBoard('board', cfg);
+				
+				var indexOfTactic = tactics.indexOf(tactics[randNum]);
+				//alert("index" + indexOfTactic);
+				tactics.splice(indexOfTactic, 1);
+				//alert(tactics);
+				//alert(tactics.length);
+			}			
+			
+			
+		</script>
+	</head>
+	
+	<body id="bodyId" onLoad="initializeBoard()">
+		<form name="frmSlope" id="slopeForm">
+			
+			<br><center><div id="board" style="width: 500px"></div>
+			<p>Status: <span id="status"></span></p>
+			<p>FEN: <span id="fen"></span></p>
+			<p>PGN: <span id="pgn"></span></p></center>
+			<input type="button" value="New Tactic" onClick="loadTactic()">
+			<input type="button" value="Enter a position" onClick="onDragStart()">
+			<input type="button" value="test" onClick=" test()">
+			<input type="button" value="clean" onClick=" cleanSolutions()">
+			<input type="button" id="startPositionBtn" value="Start Position" />
+			<input type="button" id="move1Btn" value="e2-e4" />
+			
+		</form>
+		
+		
+	</body>
+</html>
